@@ -1,5 +1,6 @@
 from datetime import date,timedelta,datetime,timezone
 from io import BytesIO
+from pathlib import Path
 import secrets
 import asyncio
 import httpx
@@ -8,6 +9,7 @@ from decimal import Decimal
 import jwt
 from fastapi import FastAPI,Depends,HTTPException
 from fastapi.responses import StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer,OAuth2PasswordRequestForm
 from sqlalchemy import case,func,or_,select
@@ -249,3 +251,10 @@ def consume_item(item_id:int,d:dict,s:Session=Depends(get_db),u:User=Depends(cur
  movement=Movement(product_id=batch.product_id,batch_id=batch.id,user_id=u.id,movement_type=Move.consumption,quantity=Decimal('1'),reason='Baixa direta' if item.consumption_notes=='Baixa direta pela tela de estoque' else 'Consumo por QR Code',department=item.department,notes=item.consumption_notes or f'Item {item.serial_number}')
  s.add(movement);s.commit();s.refresh(movement)
  return {'message':'Produto marcado como consumido','item':dto(item),'movement':dto(movement)}
+
+# O frontend e copiado para /app/static pelo Dockerfile da raiz.
+# A montagem fica no final para nao interceptar as rotas /api e /health.
+static_dir = Path(__file__).resolve().parents[1] / 'static'
+if static_dir.is_dir():
+ app.mount('/', StaticFiles(directory=static_dir, html=True), name='frontend')
+
